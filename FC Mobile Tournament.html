@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FC Mobile Tournament</title>
+<style>
+:root{
+  --bg:#070a1f; --card:#12163f; --card2:#171b4d; --border:#2a2f6e;
+  --p1:#00e5ff; --p2:#7c3aed; --gold:#f4c542; --win:#28e07a; --draw:#f4c542; --lose:#ff5470;
+  --text:#f1f3ff; --dim:#9198c9;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;}
+body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -10%,#22206b 0%,var(--bg) 60%);
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px 12px 40px;}
+.wrap{max-width:720px;margin:0 auto;}
+.hero{text-align:center;padding:10px 8px 18px;}
+.hero .tag{font-size:10px;letter-spacing:4px;color:var(--gold);font-weight:800;}
+.hero h1{margin:6px 0 2px;font-size:23px;font-weight:900;letter-spacing:.5px;
+  background:linear-gradient(90deg,var(--p1),var(--p2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero p{margin:0;color:var(--dim);font-size:12px;}
+.tabs{display:flex;gap:8px;margin:14px 0 10px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:4px;}
+.tab{flex:1;text-align:center;padding:11px 0;border-radius:11px;font-weight:800;font-size:13px;letter-spacing:.5px;
+  color:var(--dim);cursor:pointer;transition:.15s;border:none;background:transparent;font-family:inherit;}
+.tab.admin-tab{color:var(--gold)}
+.register-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}.form-card{background:linear-gradient(180deg,rgba(23,27,77,.98),rgba(18,22,63,.98));border:1px solid var(--border);border-radius:24px;padding:22px;margin-bottom:12px;box-shadow:0 14px 30px rgba(0,0,0,.18)}.form-card label{display:block;letter-spacing:.7px}.form-card h2{letter-spacing:.2px}.form-card p{margin-bottom:18px}
+.form-card h2{font-size:16px;margin:0 0 6px}.form-card p{font-size:12px;color:var(--dim);line-height:1.5}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.form-grid label{font-size:11px;color:var(--dim);font-weight:700}.form-grid input,.form-grid select,.form-card textarea{width:100%;margin-top:5px;background:#0b0f2c;border:1px solid var(--border);border-radius:10px;color:var(--text);padding:11px;font:inherit;font-size:13px}.form-grid input::placeholder{color:#6872ad}.form-grid input:focus,.form-grid select:focus{outline:none;border-color:var(--p1);box-shadow:0 0 0 3px rgba(0,229,255,.1)}.form-grid .wide{grid-column:1/-1}.primary-btn,.admin-action{width:100%;border:0;border-radius:11px;padding:12px;background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;font-weight:900;cursor:pointer;margin-top:12px}.admin-action{background:rgba(244,197,66,.1);border:1px solid var(--gold);color:var(--gold);text-align:left}.admin-action.danger{border-color:var(--lose);color:var(--lose)}.notice{font-size:12px;color:var(--dim);min-height:18px;margin-top:10px}.avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,var(--p1),var(--p2));display:inline-flex;align-items:center;justify-content:center;color:#08102b;font-weight:900;font-size:10px}.admin-list{margin-top:12px;display:grid;gap:7px}.member-row{display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:12px}.member-row span{color:var(--dim);font-size:10px}@media(max-width:760px){.register-grid{grid-template-columns:1fr}}@media(max-width:520px){.form-grid{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}.tabs{overflow:auto}.tab{min-width:100px;font-size:11px}}
+.tab.active{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;box-shadow:0 4px 14px rgba(124,58,237,.4);}
+.view{display:none;} .view.active{display:block;}
+.md{margin-bottom:22px;}
+.md-head{display:flex;align-items:center;gap:9px;margin:0 0 9px 2px;}
+.md-head .n{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--p1),var(--p2));
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0;}
+.md-head.ko .n{background:linear-gradient(135deg,var(--gold),#ff8a3d);color:#1a0f00;}
+.md-head h2{font-size:13.5px;margin:0;letter-spacing:.5px;}
+.md-head .badge{margin-left:auto;font-size:9.5px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.4px;}
+.badge.done{background:rgba(40,224,122,.15);color:var(--win);}
+.badge.pend{background:rgba(145,152,201,.14);color:var(--dim);}
+.fx{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:14px;
+  padding:12px 13px;margin-bottom:8px;}
+.fx.ko{border-color:rgba(244,197,66,.4);}
+.fx-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;}
+.team{display:flex;align-items:center;gap:8px;min-width:0;}
+.team.r{flex-direction:row-reverse;text-align:right;}
+.crest{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:11px;color:#0a0e27;background:linear-gradient(135deg,var(--p1),var(--gold));}
+.crest.win{box-shadow:0 0 0 2px var(--win);}
+.tname{min-width:0;}
+.tname .n{font-weight:800;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tname .o{font-size:9.5px;color:var(--dim);font-weight:700;}
+.mid{text-align:center;font-size:10.5px;color:var(--dim);font-weight:700;}
+.score{font-size:16px;font-weight:900;color:var(--gold);letter-spacing:1px;}
+.draw-pill{font-size:10px;font-weight:800;color:var(--draw);}
+.upbtn{margin-top:10px;width:100%;padding:9px 0;border-radius:10px;border:1px dashed var(--p1);background:rgba(0,229,255,.06);
+  color:var(--p1);font-weight:800;font-size:11.5px;letter-spacing:.4px;cursor:pointer;font-family:inherit;}
+.upbtn:disabled{opacity:.4;cursor:default;}
+.penbtn{width:100%;margin-top:6px;padding:8px 0;border-radius:10px;border:1px solid var(--gold);background:rgba(244,197,66,.08);
+  color:var(--gold);font-weight:800;font-size:11px;cursor:pointer;font-family:inherit;}
+.rmbtn{width:100%;margin-top:8px;padding:7px 0;border-radius:10px;border:1px solid var(--lose);background:rgba(255,84,112,.08);
+  color:var(--lose);font-weight:800;font-size:10.5px;cursor:pointer;font-family:inherit;}
+.status-line{margin-top:8px;font-size:11px;color:var(--dim);text-align:center;min-height:14px;}
+.tablewrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th{text-align:left;padding:14px 8px;color:var(--dim);font-size:10.5px;letter-spacing:.6px;border-bottom:1px solid var(--border);}
+td{padding:16px 8px;border-bottom:1px solid rgba(255,255,255,.05);font-weight:700;font-size:14px;}
+tr:last-child td{border-bottom:none;}
+.pos{width:26px;text-align:center;font-weight:900;font-size:15px;}
+.pos.qf{color:var(--win);} .pos.r16{color:var(--p1);} .pos.out{color:var(--lose);}
+.tn{display:flex;align-items:center;gap:10px;}
+.tn .crest{width:30px;height:30px;font-size:11px;}
+.legend{margin-top:14px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+  font-size:10.5px;color:var(--dim);text-align:center;line-height:1.7;}
+.legend b{color:var(--text);}
+.hint{margin-top:10px;font-size:10.5px;color:var(--dim);text-align:center;}
+.helpbar{text-align:center;margin-bottom:18px;}
+.helpbtn{background:none;border:1px solid var(--border);color:var(--dim);font-weight:800;font-size:11px;
+  padding:7px 14px;border-radius:20px;cursor:pointer;font-family:inherit;}
+
+/* Onboarding overlay */
+.tut-overlay{position:fixed;inset:0;background:rgba(3,4,15,.82);backdrop-filter:blur(3px);z-index:50;
+  display:flex;align-items:center;justify-content:center;padding:20px;}
+.tut-card{width:100%;max-width:340px;background:linear-gradient(180deg,var(--card2),var(--bg));
+  border:1px solid var(--border);border-radius:20px;padding:26px 22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center;}
+.fig-wrap{height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.tut-dots{display:flex;justify-content:center;gap:6px;margin-bottom:14px;}
+.tut-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:.2s;}
+.tut-dot.on{background:var(--p1);width:16px;border-radius:4px;}
+.tut-card h3{margin:0 0 8px;font-size:16px;font-weight:900;
+  background:linear-gradient(90deg,var(--p1),var(--p2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.tut-card p{margin:0 0 20px;font-size:12.5px;color:var(--dim);line-height:1.6;min-height:56px;}
+.tut-actions{display:flex;gap:8px;}
+.tut-actions button{flex:1;padding:11px 0;border-radius:12px;border:none;font-weight:800;font-size:12.5px;
+  cursor:pointer;font-family:inherit;}
+.tut-back{background:transparent;border:1px solid var(--border) !important;color:var(--dim);}
+.tut-next{background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;}
+.tut-skip{margin-top:12px;background:none;border:none;color:var(--dim);font-size:11px;text-decoration:underline;cursor:pointer;font-family:inherit;}
+
+/* Figures */
+.fig-tabs{display:flex;gap:6px;background:rgba(255,255,255,.05);padding:5px;border-radius:14px;position:relative;width:170px;}
+.fig-tabs .pill{flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:9.5px;font-weight:800;color:var(--dim);position:relative;z-index:1;}
+.fig-tabs .glider{position:absolute;top:5px;left:5px;width:calc(50% - 5px);height:calc(100% - 10px);
+  background:linear-gradient(135deg,var(--p1),var(--p2));border-radius:10px;animation:glide 2.4s ease-in-out infinite;}
+@keyframes glide{0%,40%{transform:translateX(0);}50%,90%{transform:translateX(160%);}100%{transform:translateX(0);}}
+.fig-phone{width:72px;height:104px;border:2px solid var(--border);border-radius:14px;background:var(--card2);
+  position:relative;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.fig-tap{position:absolute;bottom:16px;width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.3);
+  border:2px solid var(--p1);animation:tap 1.6s ease-in-out infinite;}
+@keyframes tap{0%{transform:scale(1);opacity:.9;}40%{transform:scale(.65);opacity:1;}75%{transform:scale(1.4);opacity:0;}100%{opacity:0;}}
+.fig-scancard{width:140px;height:78px;border-radius:10px;background:linear-gradient(180deg,var(--card2),var(--card));
+  border:1px solid var(--border);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:22px;color:var(--gold);}
+.fig-scancard .beam{position:absolute;left:0;right:0;top:-20px;height:20px;
+  background:linear-gradient(180deg,transparent,rgba(0,229,255,.55),transparent);animation:scan 2s linear infinite;}
+@keyframes scan{0%{top:-20px;}100%{top:100%;}}
+.fig-undo{font-size:44px;display:inline-block;animation:undo 1.8s ease-in-out infinite;}
+@keyframes undo{0%,100%{transform:rotate(0);}50%{transform:rotate(-65deg);}}
+.fig-trophy{font-size:46px;display:inline-block;animation:bounce 1.3s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-14px);}}
+.champ{margin:14px 0;padding:18px;border-radius:16px;text-align:center;background:linear-gradient(135deg,rgba(244,197,66,.18),rgba(124,58,237,.18));
+  border:1px solid var(--gold);}
+.champ .t{font-size:11px;letter-spacing:3px;color:var(--gold);font-weight:800;}
+.champ .n{font-size:20px;font-weight:900;margin-top:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-tab="register">REGISTER</button>
+    <button class="tab" data-tab="fixtures">FIXTURES</button>
+    <button class="tab" data-tab="table">TABLE</button>
+  </div>
+  <div class="helpbar"><button class="helpbtn" id="helpToggle" onclick="openTutorial()">❔ How to use this page</button></div>
+  <div id="fixtures" class="view"></div>
+  <div id="table" class="view"></div>
+  <div id="register" class="view active">
+    <div class="register-grid"><div class="form-card"><h2>Register player</h2>
+      <form id="registrationForm"><div class="form-grid">
+        <label>FC MOBILE USERNAME<input name="username" required minlength="3" maxlength="30" placeholder="Enter your FC Mobile username"></label>
+        <label>LOCATION<input name="location" required placeholder="e.g. Lagos, Nigeria"></label>
+        <label class="wide">UID<input name="uid" required placeholder="Enter your in-game UID"></label>
+        <label class="wide">SQUAD SCREENSHOT<input name="squadScreenshot" type="file" accept="image/*" required></label>
+      </div><button class="primary-btn">REGISTER PLAYER</button><div class="notice" id="registerNotice"></div></form>
+    </div>
+    <div class="form-card"><h2>Edit profile</h2><p>Update your username and profile picture.</p>
+      <form id="profileForm"><div class="form-grid"><label class="wide">CURRENT PLAYER NAME<select id="profileUser" required aria-label="Select your current player name"></select></label><label class="wide">NEW USERNAME<input id="profileName" placeholder="Enter a new username"></label><label class="wide">PROFILE PICTURE<input id="profilePicture" type="file" accept="image/*"></label></div><button class="primary-btn">SAVE PROFILE</button><div class="notice" id="profileNotice"></div></form>
+    </div></div>
+  </div>
+  <div id="hint" class="hint"></div>
+</div>
+<div id="tutOverlay" class="tut-overlay" style="display:none">
+  <div class="tut-card">
+    <div class="fig-wrap" id="tutFigure"></div>
+    <div class="tut-dots" id="tutDots"></div>
+    <h3 id="tutTitle"></h3>
+    <p id="tutText"></p>
+    <div class="tut-actions">
+      <button class="tut-back" id="tutBack" onclick="tutNav(-1)">Back</button>
+      <button class="tut-next" id="tutNext" onclick="tutNav(1)">Next</button>
+    </div>
+    <button class="tut-skip" onclick="closeTutorial()">Skip tutorial</button>
+  </div>
+</div>
+<input type="file" id="fileInput" accept="image/*" style="display:none">
+
+<script>
+const TEAMS = {};
+const SEED_VERSION = 3;
+let state = {version: SEED_VERSION, fixtures: [], knockout:null};
+let dbDoc = null, assets = null, sample = null, canUpload = false, canAI = false;
+let pendingFixtureId = null;
+let registeredUsers = [];
+const API_BASE = (location.port === '3000' || location.protocol === 'file:') ? 'http://127.0.0.1:8080/api' : '/api';
+
+function initials(id){ return id.length>4 ? id.slice(0,4) : id; }
+function winnerOf(m){ return m.winner || (m.hs>m.as ? m.h : m.a); }
+
+function computeStandings(){
+  const rows = {};
+  Object.keys(TEAMS).forEach(id=>rows[id]={id,name:TEAMS[id].name,mp:0,w:0,d:0,l:0,pts:0});
+  state.fixtures.forEach(f=>{
+    if(f.status!=='played') return;
+    const H=rows[f.h], A=rows[f.a];
+    H.mp++; A.mp++;
+    if(f.draw || f.hs===f.as){ H.d++; A.d++; H.pts+=1; A.pts+=1; }
+    else if(f.hs>f.as){ H.w++; H.pts+=3; A.l++; }
+    else { A.w++; A.pts+=3; H.l++; }
+  });
+  return Object.values(rows).sort((x,y)=> y.pts-x.pts || y.w-x.w || x.name.localeCompare(y.name));
+}
+
+function checkProgression(){
+  const leaguePlayed = state.fixtures.every(f=>f.status==='played');
+  if(leaguePlayed && !state.knockout){
+    const st = computeStandings();
+    state.knockout = {
+      byes:[st[0].id, st[1].id],
+      r16:[
+        {id:'r16-1', h:st[2].id, a:st[5].id, status:'pending'},
+        {id:'r16-2', h:st[3].id, a:st[4].id, status:'pending'}
+      ],
+      qf:[], final:[]
+    };
+    return;
+  }
+  if(state.knockout && state.knockout.r16.length && state.knockout.r16.every(m=>m.status==='played') && state.knockout.qf.length===0){
+    const w1 = winnerOf(state.knockout.r16[0]);
+    const w2 = winnerOf(state.knockout.r16[1]);
+    state.knockout.qf = [
+      {id:'qf-1', h:state.knockout.byes[0], a:w2, status:'pending'},
+      {id:'qf-2', h:state.knockout.byes[1], a:w1, status:'pending'}
+    ];
+    return;
+  }
+  if(state.knockout && state.knockout.qf.length && state.knockout.qf.every(m=>m.status==='played') && state.knockout.final.length===0){
+    const w1 = winnerOf(state.knockout.qf[0]);
+    const w2 = winnerOf(state.knockout.qf[1]);
+    state.knockout.final = [{id:'final', h:w1, a:w2, status:'pending'}];
+  }
+}
+
+function getMatchById(fid){
+  let m = state.fixtures.find(f=>f.id===fid);
+  if(m) return {match:m, stage:'league'};
+  if(state.knockout){
+    for(const stage of ['r16','qf','final']){
+      m = state.knockout[stage].find(f=>f.id===fid);
+      if(m) return {match:m, stage};
+    }
+  }
+  return null;
+}
+
+function matchCard(f, isKo){
+  const h=TEAMS[f.h], a=TEAMS[f.a];
+  let mid;
+  if(f.status==='played'){
+    if(f.draw) mid = '<div class="mid"><div class="draw-pill">DRAW</div></div>';
+    else mid = '<div class="mid"><div class="score">'+f.hs+' - '+f.as+'</div></div>';
+  } else if(f.status==='decider'){
+    mid = '<div class="mid"><div class="draw-pill">'+f.hs+'-'+f.as+' (PENS)</div></div>';
+  } else {
+    mid = '<div class="mid">VS</div>';
+  }
+  const hWin = f.winner ? f.winner===f.h : (f.status==='played' && !f.draw && f.hs>f.as);
+  const aWin = f.winner ? f.winner===f.a : (f.status==='played' && !f.draw && f.as>f.hs);
+  let extra = '';
+  if(f.status==='pending'){
+    extra = '<button class="upbtn" onclick="startUpload(\''+f.id+'\')">\ud83d\udcf8 UPLOAD RESULT</button><div class="status-line" id="st-'+f.id+'"></div>';
+  } else if(f.status==='decider'){
+    extra = '<button class="penbtn" onclick="decidePenalty(\''+f.id+'\',\''+f.h+'\')">\ud83c\udfc6 '+h.name+' won on penalties</button>'+
+            '<button class="penbtn" onclick="decidePenalty(\''+f.id+'\',\''+f.a+'\')">\ud83c\udfc6 '+a.name+' won on penalties</button>'+
+            '<button class="rmbtn" onclick="removeResult(\''+f.id+'\')">\u21a9 Remove result</button>'+
+            '<div class="status-line" id="st-'+f.id+'"></div>';
+  } else if(f.status==='played'){
+    extra = '<button class="rmbtn" onclick="removeResult(\''+f.id+'\')">\u21a9 Remove result</button>'+
+            '<div class="status-line" id="st-'+f.id+'"></div>';
+  }
+  return '<div class="fx'+(isKo?' ko':'')+'" data-fid="'+f.id+'">'+
+    '<div class="fx-row">'+
+      '<div class="team"><div class="crest'+(hWin?' win':'')+'">'+initials(f.h)+'</div>'+
+        '<div class="tname"><div class="n">'+h.name+'</div><div class="o">OVR '+h.ovr+'</div></div></div>'+
+      mid+
+      '<div class="team r"><div class="crest'+(aWin?' win':'')+'">'+initials(f.a)+'</div>'+
+        '<div class="tname"><div class="n">'+a.name+'</div><div class="o">OVR '+a.ovr+'</div></div></div>'+
+    '</div>'+extra+'</div>';
+}
+
+function render(){ renderFixtures(); renderTable(); renderProfileUsers(); }
+function renderProfileUsers(){ const el=document.getElementById('profileUser'); if(!el)return; el.innerHTML=registeredUsers.map(u=>'<option value="'+u.id+'">'+u.username+' · '+u.uid+'</option>').join(''); }
+async function apiForm(url, form){ const res=await fetch(API_BASE+url,{method:'POST',body:form}); if(!res.ok)throw new Error(await res.text()); return res.json(); }
+function generateFixtures(){
+  if(registeredUsers.length<8 || registeredUsers.length>20 || state.fixtures.length) return;
+  Object.keys(TEAMS).forEach(k=>delete TEAMS[k]);
+  registeredUsers.forEach((u,i)=>{const id=String(u.id||u.uid||('player-'+i));TEAMS[id]={name:u.username,ovr:u.squadOvr||125,photo:u.profilePicture};});
+  const ids=Object.keys(TEAMS), rounds=ids.length%2===0?ids.length:ids.length+1, pool=ids.slice(); if(pool.length%2)pool.push(null);
+  for(let r=0;r<rounds-1;r++){for(let i=0;i<pool.length/2;i++){const h=pool[i],a=pool[pool.length-1-i];if(h&&a)state.fixtures.push({id:'md'+(r+1)+'-'+(i+1),md:r+1,h,a,status:'pending'});}pool.splice(1,0,pool.pop());}
+  state.version=SEED_VERSION; saveState();
+}
+async function loadUsers(){ try{ const res=await fetch(API_BASE+'/users'); if(res.ok){registeredUsers=await res.json();generateFixtures();renderProfileUsers();} }catch(e){ registeredUsers=[];renderProfileUsers(); } }
+async function adminAction(action){ const notice=document.getElementById('adminNotice'); notice.textContent='Saving…'; try{const res=await fetch(API_BASE+'/admin/'+action,{method:'POST'}); if(!res.ok)throw Error('API unavailable'); notice.textContent=action==='handle-members'?'Members checked; pots/fixtures are ready when the minimum is reached.':'Action completed: '+action.replaceAll('-',' ');}catch(e){notice.textContent='Demo mode: '+action.replaceAll('-',' ')+' recorded locally.';} }
+function showMembers(){const el=document.getElementById('memberList');el.innerHTML=registeredUsers.map(u=>'<div class="member-row"><b>'+u.username+'</b><span>'+u.location||''+' · OVR '+(u.squadOvr||125)+'</span></div>').join('');}
+document.getElementById('registrationForm').onsubmit=async e=>{e.preventDefault();const n=document.getElementById('registerNotice');n.textContent='Registering and analysing squad…';try{const data=await apiForm('/users/register',new FormData(e.target));registeredUsers.push(data.user);generateFixtures();n.textContent='Registered successfully. Squad OVR: '+data.user.squadOvr;renderProfileUsers();}catch(err){n.textContent='Registration needs the Spring Boot API running. Demo registration kept local for now.';}};
+document.getElementById('profileForm').onsubmit=async e=>{e.preventDefault();const n=document.getElementById('profileNotice');const id=document.getElementById('profileUser').value;const f=new FormData();if(document.getElementById('profileName').value)f.append('username',document.getElementById('profileName').value);if(document.getElementById('profilePicture').files[0])f.append('profilePicture',document.getElementById('profilePicture').files[0]);try{const data=await fetch(API_BASE+'/users/'+id,{method:'PUT',body:f});if(!data.ok)throw Error();n.textContent='Profile updated. Fixture identity will use the new name/photo.';await loadUsers();}catch(err){if(TEAMS[id]){if(document.getElementById('profileName').value)TEAMS[id].name=document.getElementById('profileName').value;n.textContent='Profile updated in this demo fixture.';render();}}};
+
+function renderFixtures(){
+  const el = document.getElementById('fixtures');
+  let html = '';
+  if(!state.fixtures.length){ el.innerHTML='<div class="form-card"><h2>Fixtures are locked</h2><p>'+registeredUsers.length+' members registered. Fixtures and matchdays will be generated automatically when 8–20 members are registered.</p></div>'; return; }
+  const maxMd=Math.max(...state.fixtures.map(f=>f.md));
+  for(let md=1; md<=maxMd; md++){
+    const mfx = state.fixtures.filter(f=>f.md===md);
+    const doneCount = mfx.filter(f=>f.status==='played').length;
+    html += '<div class="md"><div class="md-head"><div class="n">'+md+'</div><h2>MATCHDAY '+md+'</h2>'+
+      '<div class="badge '+(doneCount===mfx.length?'done':'pend')+'">'+doneCount+'/'+mfx.length+' PLAYED</div></div>';
+    mfx.forEach(f=>{ html += matchCard(f,false); });
+    html += '</div>';
+  }
+  if(state.knockout){
+    const rounds = [['R16 PLAYOFFS', state.knockout.r16], ['QUARTER-FINALS', state.knockout.qf], ['FINAL', state.knockout.final]];
+    rounds.forEach(([label, matches])=>{
+      if(!matches || !matches.length) return;
+      const done = matches.filter(m=>m.status==='played').length;
+      html += '<div class="md"><div class="md-head ko"><div class="n">\u2605</div><h2>'+label+'</h2>'+
+        '<div class="badge '+(done===matches.length?'done':'pend')+'">'+done+'/'+matches.length+' PLAYED</div></div>';
+      matches.forEach(m=>{ html += matchCard(m,true); });
+      html += '</div>';
+    });
+    if(state.knockout.final.length && state.knockout.final[0].status==='played'){
+      const champ = TEAMS[winnerOf(state.knockout.final[0])];
+      html += '<div class="champ"><div class="t">TOURNAMENT CHAMPION</div><div class="n">\ud83c\udfc6 '+champ.name+'</div></div>';
+    }
+  } else {
+    const leftToPlay = state.fixtures.filter(f=>f.status!=='played').length;
+    if(leftToPlay===0) html += '<div class="hint">Generating knockout bracket…</div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderTable(){
+  const el = document.getElementById('table');
+  const rows = computeStandings();
+  let body = '';
+  rows.forEach((r,i)=>{
+    const pos = i+1;
+    const cls = pos<=2 ? 'qf' : pos<=6 ? 'r16' : 'out';
+    body += '<tr><td class="pos '+cls+'">'+pos+'</td>'+
+      '<td><div class="tn"><div class="crest">'+initials(r.id)+'</div>'+r.name+'</div></td>'+
+      '<td>'+r.mp+'</td><td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td><td style="color:var(--gold)">'+r.pts+'</td></tr>';
+  });
+  el.innerHTML = '<div class="tablewrap"><table>'+
+    '<tr><th>#</th><th>TEAM</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>PTS</th></tr>'+
+    body+'</table></div>'+
+    '<div class="legend"><b>\ud83d\udfe2 QF</b> Top 2 (direct) &middot; <b>\ud83d\udd35 R16</b> 3rd\u20136th (playoff) &middot; <b>\ud83d\udd34 OUT</b> 7th\u20138th</div>';
+}
+
+const TUT_STEPS = [
+  {title:'Fixtures &amp; Table', text:'Switch anytime between all match fixtures and the live, auto-updating standings table.', fig:'tabs'},
+  {title:'Upload Your Result', text:'Open your match card and tap Upload Result, then choose a screenshot of the final score.', fig:'upload'},
+  {title:'AI Reads the Score', text:'Claude scans the screenshot and fills in the score for you automatically — no typing needed.', fig:'scan'},
+  {title:'Made a Mistake?', text:'Tap Remove Result on any match to clear it and enter the correct score again.', fig:'undo'},
+  {title:'Knockouts, Automatically', text:'Once all 7 matchdays finish, R16 Playoffs, Quarter-Finals and the Final are generated for you — no setup required.', fig:'trophy'}
+];
+let tutIndex = 0;
+
+function figureHtml(kind){
+  if(kind==='tabs') return '<div class="fig-tabs"><div class="glider"></div><div class="pill">FIXTURES</div><div class="pill">TABLE</div></div>';
+  if(kind==='upload') return '<div class="fig-phone">\ud83d\udcf8<div class="fig-tap"></div></div>';
+  if(kind==='scan') return '<div class="fig-scancard">2 - 1<div class="beam"></div></div>';
+  if(kind==='undo') return '<div class="fig-undo">\u21a9\ufe0f</div>';
+  if(kind==='trophy') return '<div class="fig-trophy">\ud83c\udfc6</div>';
+  return '';
+}
+
+function renderTutStep(){
+  const s = TUT_STEPS[tutIndex];
+  document.getElementById('tutFigure').innerHTML = figureHtml(s.fig);
+  document.getElementById('tutTitle').innerHTML = s.title;
+  document.getElementById('tutText').textContent = s.text;
+  document.getElementById('tutDots').innerHTML = TUT_STEPS.map((_,i)=>'<div class="tut-dot'+(i===tutIndex?' on':'')+'"></div>').join('');
+  document.getElementById('tutBack').style.visibility = tutIndex===0 ? 'hidden' : 'visible';
+  document.getElementById('tutNext').textContent = tutIndex===TUT_STEPS.length-1 ? 'Got it' : 'Next';
+}
+
+function tutNav(dir){
+  if(dir>0 && tutIndex===TUT_STEPS.length-1){ closeTutorial(); return; }
+  tutIndex = Math.max(0, Math.min(TUT_STEPS.length-1, tutIndex+dir));
+  renderTutStep();
+}
+
+function openTutorial(){
+  tutIndex = 0;
+  renderTutStep();
+  document.getElementById('tutOverlay').style.display = 'flex';
+}
+
+function closeTutorial(){
+  document.getElementById('tutOverlay').style.display = 'none';
+  try{ localStorage.setItem('fcm_tutorial_seen', '1'); }catch(e){}
+}
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+  };
+});
+
+function startUpload(fid){
+  if(!canUpload){ setStatus(fid, 'Screenshot upload is unavailable right now.'); return; }
+  pendingFixtureId = fid;
+  document.getElementById('fileInput').click();
+}
+
+function setStatus(fid, msg){ const el = document.getElementById('st-'+fid); if(el) el.textContent = msg; }
+
+document.getElementById('fileInput').onchange = async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file || !pendingFixtureId) return;
+  const fid = pendingFixtureId;
+  const found = getMatchById(fid);
+  if(!found) return;
+  const {match:fx, stage} = found;
+  setStatus(fid, 'Uploading screenshot…');
+  try{
+    const up = await assets.upload(file);
+    if(!canAI){ setStatus(fid, 'AI score reading is unavailable. Re-upload when the AI service is connected.'); return; }
+    setStatus(fid, 'AI is reading the result…');
+    const hName = TEAMS[fx.h].name, aName = TEAMS[fx.a].name;
+    const prompt = 'This is a screenshot of an EA Sports FC Mobile match result screen between "'+hName+'" (home) and "'+aName+'" (away). Read the final score and the two displayed team names. Reply with ONLY: {"homeTeam": string, "awayTeam": string, "homeScore": number, "awayScore": number, "confidence": "high"|"low", "teamsMatch": boolean, "note": string}. Set teamsMatch false unless both displayed teams match the fixture teams exactly or clearly enough to identify them.';
+    const result = await sample.json(prompt, {images:[file], modelTier:'quick'});
+    if(result.teamsMatch!==true || result.confidence==='low' || typeof result.homeScore!=='number' || typeof result.awayScore!=='number'){
+      setStatus(fid, result.teamsMatch===false ? 'Wrong teams detected. Re-upload the correct score screen for this fixture.' : 'AI could not read the score clearly ('+(result.note||'unclear image')+'). Try a clearer screenshot.');
+      return;
+    }
+    fx.hs = result.homeScore; fx.as = result.awayScore; fx.screenshot = up.id;
+    if(stage==='league'){
+      fx.draw = result.homeScore===result.awayScore;
+      fx.status = 'played';
+    } else {
+      if(result.homeScore===result.awayScore){ fx.status = 'decider'; }
+      else { fx.status = 'played'; fx.winner = result.homeScore>result.awayScore ? fx.h : fx.a; }
+    }
+    checkProgression();
+    await saveState();
+    setStatus(fid, fx.status==='decider' ? 'Match level '+result.homeScore+'-'+result.awayScore+' — pick the penalty winner below.' : 'Result added: '+result.homeScore+' - '+result.awayScore);
+    render();
+  }catch(err){
+    setStatus(fid, 'Score screenshot rejected. Re-upload the correct final-score screen.');
+  }
+};
+
+function decidePenalty(fid, winnerId){
+  const found = getMatchById(fid);
+  if(!found) return;
+  found.match.status = 'played';
+  found.match.winner = winnerId;
+  checkProgression();
+  saveState();
+  render();
+}
+
+function removeResult(fid){
+  const found = getMatchById(fid);
+  if(!found) return;
+  const {match:fx, stage} = found;
+  delete fx.hs; delete fx.as; delete fx.draw; delete fx.winner; delete fx.screenshot;
+  fx.status = 'pending';
+  if(stage==='league' && state.knockout){
+    state.knockout = null;
+  } else if(stage==='r16' && state.knockout){
+    state.knockout.qf = []; state.knockout.final = [];
+  } else if(stage==='qf' && state.knockout){
+    state.knockout.final = [];
+  }
+  saveState();
+  setStatus(fid, 'Result removed.');
+  render();
+}
+
+async function saveState(){ if(dbDoc) await dbDoc.set(state); }
+
+async function boot(){
+  const hint = document.getElementById('hint');
+  try{
+    let seen = false;
+    try{ seen = localStorage.getItem('fcm_tutorial_seen') === '1'; }catch(e){}
+    if(!seen && registeredUsers.length>=8) openTutorial();
+  }catch(e){}
+  try{
+    const db = await window.claude.use('db');
+    assets = await window.claude.use('assets');
+    sample = await window.claude.use('sample');
+    if(db){
+      dbDoc = db.doc('tournament/state');
+      const snap = await dbDoc.get();
+      if(snap.exists && snap.data() && snap.data().fixtures && snap.data().version === SEED_VERSION){
+        state = snap.data(); if(!state.knockout) state.knockout=null;
+      } else {
+        await dbDoc.set(state);
+      }
+      dbDoc.onSnapshot(s=>{ if(s.exists && s.data()){ state = s.data(); render(); } });
+    }
+    canUpload = !!assets;
+    if(sample){ try{ const lim = await sample.limits(); canAI = !!lim.images; }catch(e){ canAI = false; } }
+    if(!canUpload) hint.textContent = 'Viewing only — request edit access to upload match results.';
+    else if(!canAI) hint.textContent = 'Screenshot upload is on; automatic score reading is unavailable, so scores need manual entry.';
+  }catch(e){ /* run fully offline if capabilities unavailable */ }
+  await loadUsers();
+  render();
+}
+boot();
+</script>
+</body>
+</html>

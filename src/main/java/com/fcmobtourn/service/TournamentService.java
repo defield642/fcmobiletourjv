@@ -1,0 +1,3 @@
+package com.fcmobtourn.service;
+import com.fcmobtourn.entity.Tournament; import com.fcmobtourn.repository.TournamentRepository; import org.springframework.stereotype.Service; import java.time.LocalDateTime;
+@Service public class TournamentService { private final TournamentRepository repo; public TournamentService(TournamentRepository r){repo=r;} public Tournament createTournament(){return repo.save(Tournament.builder().status("REGISTRATION_OPEN").createdAt(LocalDateTime.now()).minUsers(10).maxUsers(20).waitingHours(12).build());} public Tournament current(){return repo.findTopByOrderByCreatedAtDesc().orElseGet(this::createTournament);} public Tournament setStatus(String status){Tournament t=current();t.setStatus(status);return repo.save(t);} }

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: fcmobile-tournament-api
+    runtime: java
+    plan: free
+    buildCommand: mvn package -DskipTests
+    startCommand: java -jar target/fcmobtourn-1.0.0.jar
+    envVars:
+      - key: CACHE_REDIS_URI
+        fromDatabase:
+          name: fcmobile-tournament-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+databases:
+  - name: fcmobile-tournament-db
+    plan: free

@@ -1,0 +1,8 @@
+package com.fcmobtourn.service;
+import com.fcmobtourn.entity.User; import com.fcmobtourn.repository.UserRepository; import org.springframework.stereotype.Service; import org.springframework.web.multipart.MultipartFile; import java.time.LocalDateTime; import java.util.*;
+@Service public class RegistrationService {
+ private final UserRepository repo; private final AIService ai;
+ public RegistrationService(UserRepository r,AIService a){repo=r;ai=a;}
+ public Map<String,Object> registerUser(String name,String location,String uid,MultipartFile squad){ if(repo.countByStatus("ACTIVE")>=20) throw new IllegalStateException("Registration is full: maximum 20 members"); if(repo.findByUsername(name).isPresent()||repo.findByUid(uid).isPresent()) throw new IllegalArgumentException("Username or UID already registered"); User u=User.builder().username(name).location(location).uid(uid).registrationTime(LocalDateTime.now()).status("ACTIVE").squadOvr(125).build(); try{if(squad!=null&&!squad.isEmpty()){String data=Base64.getEncoder().encodeToString(squad.getBytes());u.setSquadScreenshot(data);u.setSquadOvr(ai.analyzeSquadScreenshot(data));}}catch(Exception ignored){} u=repo.save(u);return Map.of("success",true,"user",u,"message","Registration successful"); }
+ public Map<String,Object> updateUserProfile(Long id,String name,MultipartFile picture){User u=repo.findById(id).orElseThrow();if(name!=null&&!name.isBlank())u.setUsername(name);try{if(picture!=null&&!picture.isEmpty())u.setProfilePicture(Base64.getEncoder().encodeToString(picture.getBytes()));}catch(Exception ignored){}repo.save(u);return Map.of("success",true,"user",u);}
+}
