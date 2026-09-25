@@ -23,23 +23,12 @@ public class AIService {
     public int analyzeSquadScreenshot(String image) {
         try {
             JsonNode result = ask(image, squadPrompt());
-
-            // Prefer the large squad OVR shown by the game. Never use a player-card rating
-            // when the screenshot contains a separate squad OVR.
             int displayedOvr = result.path("displayedSquadOvr").asInt(-1);
-            if (displayedOvr < 1) {
-                displayedOvr = result.path("ovr").asInt(-1);
-            }
-            if (displayedOvr >= 1 && displayedOvr <= 200) {
-                return displayedOvr;
-            }
 
-            // If the OVR is genuinely hidden or unreadable, estimate from the starting XI.
-            // This is safer than silently returning 125 for every unreadable screenshot.
+            int total = 0;
+            int count = 0;
             JsonNode ratings = result.path("startingPlayerRatings");
-            if (ratings.isArray() && ratings.size() >= 8) {
-                int total = 0;
-                int count = 0;
+            if (ratings.isArray()) {
                 for (JsonNode rating : ratings) {
                     int value = rating.asInt(-1);
                     if (value >= 1 && value <= 200) {
@@ -47,12 +36,24 @@ public class AIService {
                         count++;
                     }
                 }
-                if (count >= 8) {
-                    return Math.round((float) total / count);
-                }
+            }
+            int calculatedOvr = count >= 8 ? Math.round((float) total / count) : -1;
+
+            // Accept a displayed number only when the AI says it is explicitly labelled
+            // as squad/team OVR, and when it is reasonably consistent with the XI.
+            boolean explicit = result.path("ovrLabelFound").asBoolean(false);
+            boolean plausible = calculatedOvr < 0 || Math.abs(displayedOvr - calculatedOvr) <= 5;
+            if (explicit && displayedOvr >= 1 && displayedOvr <= 200 && plausible) {
+                return displayedOvr;
+            }
+            if (calculatedOvr >= 1 && calculatedOvr <= 200) {
+                return calculatedOvr;
+            }
+            if (explicit && displayedOvr >= 1 && displayedOvr <= 200) {
+                return displayedOvr;
             }
         } catch (Exception ignored) {
-            // Registration remains available even if the vision provider is temporarily unavailable.
+            // Registration remains available if the vision provider is unavailable.
         }
         return 125;
     }
@@ -82,18 +83,19 @@ public class AIService {
     private String squadPrompt() {
         return """
                 Analyze this FC Mobile squad screenshot carefully. Return JSON only using this schema:
-                {"displayedSquadOvr": 0, "startingPlayerRatings": [], "confidence": "high", "evidence": ""}
+                {"displayedSquadOvr": 0, "ovrLabelFound": false, "startingPlayerRatings": [], "confidence": "high", "evidence": ""}
 
                 Rules:
-                1. Find the squad/team overall rating: it is normally the large OVR number in the
-                   squad header or beside the team name. Copy that exact number into displayedSquadOvr.
-                2. Do not mistake a player card rating, chemistry, rank, level, formation number,
-                   coins, or currency for the squad OVR.
-                3. Read the starting XI player-card ratings into startingPlayerRatings only as a
-                   fallback. Ignore substitutes and reserve players.
-                4. If the squad OVR is not visible or unreadable, set displayedSquadOvr to 0.
-                5. Use confidence high only when the displayed squad OVR is clearly readable.
-                6. Do not invent a value. Use integers only.
+                1. Set displayedSquadOvr only when you can read a number next to an explicit label
+                   such as OVR, TEAM OVR, SQUAD OVR, or OVERALL. Set ovrLabelFound true only then.
+                2. Never treat a player-card rating, chemistry, rank, level, formation, coins,
+                   currency, or jersey number as squad OVR. A large number alone is not enough.
+                3. Read every visible starting-XI player-card rating into startingPlayerRatings.
+                   Ignore substitutes, reserves, chemistry, and card-level numbers.
+                4. If there is no clearly labelled squad OVR, set displayedSquadOvr to 0 and let
+                   the application calculate a conservative starting-XI average.
+                5. Use confidence high only when the labelled squad OVR is clearly readable.
+                6. Do not invent values. Use integers only.
                 """;
     }
 
