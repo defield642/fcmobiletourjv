@@ -17,3 +17,9 @@ services:
 databases:
   - name: fcmobile-tournament-db
     plan: free
+
+  - type: web
+    name: fcmobile-tournament-frontend
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
