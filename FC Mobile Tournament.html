@@ -162,7 +162,6 @@ tr:last-child td{border-bottom:none;}
     <button class="tut-skip" onclick="closeTutorial()">Skip tutorial</button>
   </div>
 </div>
-<input type="file" id="fileInput" accept="image/*" style="display:none">
 
 <script>
 const TEAMS = {};
@@ -247,15 +246,9 @@ function matchCard(f, isKo){
   const aWin = f.winner ? f.winner===f.a : (f.status==='played' && !f.draw && f.as>f.hs);
   let extra = '';
   if(f.status==='pending'){
-    extra = '<button class="upbtn" onclick="startUpload(\''+f.id+'\')">\ud83d\udcf8 UPLOAD RESULT</button><div class="status-line" id="st-'+f.id+'"></div>';
-  } else if(f.status==='decider'){
-    extra = '<button class="penbtn" onclick="decidePenalty(\''+f.id+'\',\''+f.h+'\')">\ud83c\udfc6 '+h.name+' won on penalties</button>'+
-            '<button class="penbtn" onclick="decidePenalty(\''+f.id+'\',\''+f.a+'\')">\ud83c\udfc6 '+a.name+' won on penalties</button>'+
-            '<button class="rmbtn" onclick="removeResult(\''+f.id+'\')">\u21a9 Remove result</button>'+
-            '<div class="status-line" id="st-'+f.id+'"></div>';
-  } else if(f.status==='played'){
-    extra = '<button class="rmbtn" onclick="removeResult(\''+f.id+'\')">\u21a9 Remove result</button>'+
-            '<div class="status-line" id="st-'+f.id+'"></div>';
+    extra = '<div class="status-line" id="st-'+f.id+'">Result will be entered by the administrator.</div>';
+  } else if(f.status==='decider' || f.status==='played'){
+    extra = '<div class="status-line" id="st-'+f.id+'">Results are controlled by the administrator.</div>';
   }
   return '<div class="fx'+(isKo?' ko':'')+'" data-fid="'+f.id+'">'+
     '<div class="fx-row">'+
@@ -337,8 +330,8 @@ function renderTable(){
 
 const TUT_STEPS = [
   {title:'Fixtures &amp; Table', text:'Switch anytime between all match fixtures and the live, auto-updating standings table.', fig:'tabs'},
-  {title:'Upload Your Result', text:'Open your match card and tap Upload Result, then choose a screenshot of the final score.', fig:'upload'},
-  {title:'AI Reads the Score', text:'Claude scans the screenshot and fills in the score for you automatically — no typing needed.', fig:'scan'},
+  {title:'Admin Updates Results', text:'The administrator enters both team scores after each match and the table updates automatically.', fig:'scan'},
+  
   {title:'Made a Mistake?', text:'Tap Remove Result on any match to clear it and enter the correct score again.', fig:'undo'},
   {title:'Knockouts, Automatically', text:'Once all 7 matchdays finish, R16 Playoffs, Quarter-Finals and the Final are generated for you — no setup required.', fig:'trophy'}
 ];
@@ -346,7 +339,7 @@ let tutIndex = 0;
 
 function figureHtml(kind){
   if(kind==='tabs') return '<div class="fig-tabs"><div class="glider"></div><div class="pill">FIXTURES</div><div class="pill">TABLE</div></div>';
-  if(kind==='upload') return '<div class="fig-phone">\ud83d\udcf8<div class="fig-tap"></div></div>';
+  if(kind==='upload') return '<div class="fig-phone">\u270e<div class="fig-tap"></div></div>';
   if(kind==='scan') return '<div class="fig-scancard">2 - 1<div class="beam"></div></div>';
   if(kind==='undo') return '<div class="fig-undo">\u21a9\ufe0f</div>';
   if(kind==='trophy') return '<div class="fig-trophy">\ud83c\udfc6</div>';
@@ -388,51 +381,6 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.getElementById(t.dataset.tab).classList.add('active');
   };
 });
-
-function startUpload(fid){
-  if(!canUpload){ setStatus(fid, 'Screenshot upload is unavailable right now.'); return; }
-  pendingFixtureId = fid;
-  document.getElementById('fileInput').click();
-}
-
-function setStatus(fid, msg){ const el = document.getElementById('st-'+fid); if(el) el.textContent = msg; }
-
-document.getElementById('fileInput').onchange = async (e)=>{
-  const file = e.target.files[0];
-  e.target.value = '';
-  if(!file || !pendingFixtureId) return;
-  const fid = pendingFixtureId;
-  const found = getMatchById(fid);
-  if(!found) return;
-  const {match:fx, stage} = found;
-  setStatus(fid, 'Uploading screenshot…');
-  try{
-    const up = await assets.upload(file);
-    if(!canAI){ setStatus(fid, 'AI score reading is unavailable. Re-upload when the AI service is connected.'); return; }
-    setStatus(fid, 'AI is reading the result…');
-    const hName = TEAMS[fx.h].name, aName = TEAMS[fx.a].name;
-    const prompt = 'This is a screenshot of an EA Sports FC Mobile match result screen between "'+hName+'" (home) and "'+aName+'" (away). Read the final score and the two displayed team names. Reply with ONLY: {"homeTeam": string, "awayTeam": string, "homeScore": number, "awayScore": number, "confidence": "high"|"low", "teamsMatch": boolean, "note": string}. Set teamsMatch false unless both displayed teams match the fixture teams exactly or clearly enough to identify them.';
-    const result = await sample.json(prompt, {images:[file], modelTier:'quick'});
-    if(result.teamsMatch!==true || result.confidence==='low' || typeof result.homeScore!=='number' || typeof result.awayScore!=='number'){
-      setStatus(fid, result.teamsMatch===false ? 'Wrong teams detected. Re-upload the correct score screen for this fixture.' : 'AI could not read the score clearly ('+(result.note||'unclear image')+'). Try a clearer screenshot.');
-      return;
-    }
-    fx.hs = result.homeScore; fx.as = result.awayScore; fx.screenshot = up.id;
-    if(stage==='league'){
-      fx.draw = result.homeScore===result.awayScore;
-      fx.status = 'played';
-    } else {
-      if(result.homeScore===result.awayScore){ fx.status = 'decider'; }
-      else { fx.status = 'played'; fx.winner = result.homeScore>result.awayScore ? fx.h : fx.a; }
-    }
-    checkProgression();
-    await saveState();
-    setStatus(fid, fx.status==='decider' ? 'Match level '+result.homeScore+'-'+result.awayScore+' — pick the penalty winner below.' : 'Result added: '+result.homeScore+' - '+result.awayScore);
-    render();
-  }catch(err){
-    setStatus(fid, 'Score screenshot rejected. Re-upload the correct final-score screen.');
-  }
-};
 
 function decidePenalty(fid, winnerId){
   const found = getMatchById(fid);
