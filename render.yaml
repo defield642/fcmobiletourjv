@@ -10,16 +10,17 @@ services:
         fromDatabase:
           name: fcmobile-tournament-db
           property: connectionString
-      - key: OPENAI_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4o-mini
-databases:
-  - name: fcmobile-tournament-db
-    plan: free
+      - key: OPENROUTER_MODEL
+        value: openrouter/free
 
   - type: web
     name: fcmobile-tournament-frontend
     runtime: static
     buildCommand: ""
     staticPublishPath: .
+
+databases:
+  - name: fcmobile-tournament-db
+    plan: free
