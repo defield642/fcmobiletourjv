@@ -268,7 +268,7 @@ function matchCard(f, isKo){
 }
 
 function render(){ renderFixtures(); renderTable(); renderProfileUsers(); }
-function renderProfileUsers(){ const el=document.getElementById('profileUser'); if(!el)return; el.innerHTML=registeredUsers.map(u=>'<option value="'+u.id+'">'+u.username+' · '+u.uid+'</option>').join(''); }
+function renderProfileUsers(){ const el=document.getElementById('profileUser'); if(!el)return; el.innerHTML=registeredUsers.map(u=>'<option value="'+u.id+'">'+u.username+(u.uid&&!u.uid.startsWith('AUTO-')?' · '+u.uid:'')+'</option>').join(''); }
 async function apiForm(url, form){ const res=await fetch(API_BASE+url,{method:'POST',body:form}); if(!res.ok)throw new Error(await res.text()); return res.json(); }
 function generateFixtures(){
   if(registeredUsers.length<8 || registeredUsers.length>20 || state.fixtures.length) return;
