@@ -171,7 +171,7 @@ let state = {version: SEED_VERSION, fixtures: [], knockout:null};
 let dbDoc = null, assets = null, sample = null, canUpload = false, canAI = false;
 let pendingFixtureId = null;
 let registeredUsers = [];
-const API_BASE = window.__FCMOBILE_API__ || ((location.port === '3000' || location.protocol === 'file:') ? 'http://127.0.0.1:8080/api' : '/api');
+const API_BASE = window.__FCMOBILE_API__ || ((location.port === '3000' || location.protocol === 'file:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? 'http://127.0.0.1:8080/api' : 'https://fcmobile-tournament-api.onrender.com/api');
 
 function initials(id){ return id.length>4 ? id.slice(0,4) : id; }
 function winnerOf(m){ return m.winner || (m.hs>m.as ? m.h : m.a); }
