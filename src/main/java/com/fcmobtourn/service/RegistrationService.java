@@ -1,11 +1,60 @@
 package com.fcmobtourn.service;
-import com.fcmobtourn.entity.User; import com.fcmobtourn.repository.UserRepository; import org.springframework.jdbc.core.JdbcTemplate; import org.springframework.stereotype.Service; import org.springframework.web.multipart.MultipartFile; import java.time.LocalDateTime; import java.util.*;
-@Service public class RegistrationService {
- private final UserRepository repo; private final AIService ai; private final JdbcTemplate jdbc;
- public RegistrationService(UserRepository r,AIService a,JdbcTemplate j){repo=r;ai=a;jdbc=j;}
- public Map<String,Object> registerUser(String name,String location,String uid,MultipartFile squad){ makeUidOptionalForExistingDatabase(); if(repo.countByStatus("ACTIVE")>=20) throw new IllegalStateException("Registration is full: maximum 20 members"); String normalizedUid=uid==null||uid.isBlank()?null:uid.trim(); if(repo.findByUsername(name).isPresent()||(normalizedUid!=null&&repo.findByUid(normalizedUid).isPresent())) throw new IllegalArgumentException("Username or UID already registered"); String storedUid=normalizedUid==null?"AUTO-"+UUID.randomUUID().toString().replace("-","").substring(0,20):normalizedUid; User u=User.builder().username(name).location(location).uid(storedUid).registrationTime(LocalDateTime.now()).status("ACTIVE").squadOvr(125).build(); try{if(squad!=null&&!squad.isEmpty()){String data=Base64.getEncoder().encodeToString(squad.getBytes());u.setSquadScreenshot(data);u.setSquadOvr(ai.analyzeSquadScreenshot(data));}}catch(Exception ignored){} u=repo.save(u); Map<String,Object> responseUser=new LinkedHashMap<>(); responseUser.put("id",u.getId()); responseUser.put("username",u.getUsername()); responseUser.put("location",u.getLocation()); responseUser.put("uid",u.getUid()); responseUser.put("squadOvr",u.getSquadOvr()); responseUser.put("profilePicture",u.getProfilePicture()); return Map.of("success",true,"user",responseUser,"message","Registration successful"); }
- private void makeUidOptionalForExistingDatabase(){
-  try{ jdbc.execute("ALTER TABLE users ALTER COLUMN uid DROP NOT NULL"); }catch(Exception ignored){}
- }
- public Map<String,Object> updateUserProfile(Long id,String name,MultipartFile picture){User u=repo.findById(id).orElseThrow();if(name!=null&&!name.isBlank())u.setUsername(name);try{if(picture!=null&&!picture.isEmpty())u.setProfilePicture(Base64.getEncoder().encodeToString(picture.getBytes()));}catch(Exception ignored){}repo.save(u);return Map.of("success",true,"user",u);}
+
+import com.fcmobtourn.entity.User;
+import com.fcmobtourn.repository.UserRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+public class RegistrationService {
+    private final UserRepository users;
+    private final TournamentService tournaments;
+
+    public RegistrationService(UserRepository users, TournamentService tournaments) {
+        this.users = users;
+        this.tournaments = tournaments;
+    }
+
+    public Map<String, Object> registerUser(String name, String location, String uid) {
+        if (users.countByStatus("ACTIVE") >= 8) {
+            throw new IllegalStateException("Registration is full: this tournament has exactly 8 places.");
+        }
+        String username = name == null ? "" : name.trim();
+        String playerLocation = location == null ? "" : location.trim();
+        String normalizedUid = uid == null || uid.isBlank() ? null : uid.trim();
+        if (username.isBlank()) throw new IllegalArgumentException("Username is required.");
+        if (playerLocation.isBlank()) throw new IllegalArgumentException("Location is required.");
+        if (users.findByUsername(username).isPresent()
+                || (normalizedUid != null && users.findByUid(normalizedUid).isPresent())) {
+            throw new IllegalArgumentException("Username or UID is already registered.");
+        }
+
+        User user = User.builder()
+                .username(username)
+                .location(playerLocation)
+                .uid(normalizedUid == null ? "AUTO-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20) : normalizedUid)
+                .registrationTime(LocalDateTime.now())
+                .status("ACTIVE")
+                .build();
+        user = users.save(user);
+        tournaments.ensureLeagueFixtures();
+
+        Map<String, Object> responseUser = new LinkedHashMap<>();
+        responseUser.put("id", user.getId());
+        responseUser.put("username", user.getUsername());
+        responseUser.put("location", user.getLocation());
+        responseUser.put("uid", user.getUid());
+        responseUser.put("pot", user.getPot());
+        return Map.of("success", true, "user", responseUser, "message", "Registration successful.");
+    }
+
+    public User updateUserProfile(Long id, String name) {
+        User user = users.findById(id).orElseThrow();
+        if (name != null && !name.isBlank()) user.setUsername(name.trim());
+        return users.save(user);
+    }
 }

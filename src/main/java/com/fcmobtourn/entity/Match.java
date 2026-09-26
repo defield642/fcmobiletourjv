@@ -1,5 +1,4 @@
 package com.fcmobtourn.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,7 +10,6 @@ public class Match {
  @Column(nullable=false) private Long homeUserId, awayUserId;
  private Integer homeScore, awayScore, matchday;
  @Column(nullable=false) private String stage, status;
- @Lob @Column(columnDefinition="TEXT") private String screenshot;
  private Long winnerUserId;
  private boolean draw;
 }

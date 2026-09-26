@@ -5,4 +5,5 @@ import java.util.List;
 public interface MatchRepository extends JpaRepository<Match,String> {
  List<Match> findByTournamentIdOrderByMatchdayAscIdAsc(Long tournamentId);
  List<Match> findByTournamentIdAndStage(Long tournamentId,String stage);
+ void deleteByTournamentIdAndStageNot(Long tournamentId,String stage);
 }

@@ -11,9 +11,7 @@ public class User {
  @Column(nullable=false, unique=true, length=30) private String username;
  @Column(nullable=false, length=80) private String location;
  @Column(nullable=true, unique=true, length=40) private String uid;
- private Integer squadOvr;
- @Lob @Column(columnDefinition="TEXT") private String squadScreenshot;
- @Lob @Column(columnDefinition="TEXT") private String profilePicture;
+ private Integer pot;
  private LocalDateTime registrationTime;
  @Column(nullable=false, length=20) private String status;
 }
