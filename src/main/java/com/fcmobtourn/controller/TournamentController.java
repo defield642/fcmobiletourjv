@@ -30,7 +30,7 @@ public class TournamentController {
     @Value("${admin.username:Timmy45G}")
     private String configuredAdminUsername;
 
-    @Value("${admin.access.pin:1234}")
+    @Value("${admin.access.pin:8187}")
     private String configuredAdminPin;
 
     public TournamentController(UserRepository users, TournamentRepository tournaments, MatchRepository matches,
