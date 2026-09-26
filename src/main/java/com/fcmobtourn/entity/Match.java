@@ -10,6 +10,8 @@ public class Match {
  @Column(nullable=false) private Long homeUserId, awayUserId;
  private Integer homeScore, awayScore, matchday;
  @Column(nullable=false) private String stage, status;
+ private String seriesId;
+ private Integer leg;
  private Long winnerUserId;
  private boolean draw;
 }

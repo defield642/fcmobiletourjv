@@ -95,16 +95,30 @@ public class TournamentService {
     public void advanceAfterScore(Tournament tournament) {
         List<Match> league = matches.findByTournamentIdAndStage(tournament.getId(), "LEAGUE");
         if (league.size() == 28 && league.stream().allMatch(this::played)
+                && matches.findByTournamentIdAndStage(tournament.getId(), "ROUND_OF_16").isEmpty()) {
+            // Remove any knockout fixtures created by the previous bracket before rebuilding it.
+            matches.deleteByTournamentIdAndStageNot(tournament.getId(), "LEAGUE");
+            List<Standing> table = standings(tournament.getId());
+            createTie(tournament, "r16-1", "ROUND_OF_16", table.get(2).getUserId(), table.get(5).getUserId());
+            createTie(tournament, "r16-2", "ROUND_OF_16", table.get(3).getUserId(), table.get(4).getUserId());
+            tournament.setStatus("KNOCKOUT");
+            tournaments.save(tournament);
+        }
+
+        List<Match> roundOf16 = matches.findByTournamentIdAndStage(tournament.getId(), "ROUND_OF_16");
+        if (roundOf16.size() == 4 && roundOf16.stream().allMatch(this::played)
                 && matches.findByTournamentIdAndStage(tournament.getId(), "SEMIFINAL").isEmpty()) {
-            List<Standing> standings = standings(tournament.getId());
-            createKnockoutMatch(tournament, "semi-1", standings.get(0).getUserId(), standings.get(3).getUserId());
-            createKnockoutMatch(tournament, "semi-2", standings.get(1).getUserId(), standings.get(2).getUserId());
+            List<Standing> table = standings(tournament.getId());
+            Long winner36 = seriesWinner(tournament, "r16-1");
+            Long winner45 = seriesWinner(tournament, "r16-2");
+            createTie(tournament, "sf-1", "SEMIFINAL", table.get(0).getUserId(), winner36);
+            createTie(tournament, "sf-2", "SEMIFINAL", table.get(1).getUserId(), winner45);
         }
 
         List<Match> semifinals = matches.findByTournamentIdAndStage(tournament.getId(), "SEMIFINAL");
-        if (semifinals.size() == 2 && semifinals.stream().allMatch(this::played)
+        if (semifinals.size() == 4 && semifinals.stream().allMatch(this::played)
                 && matches.findByTournamentIdAndStage(tournament.getId(), "FINAL").isEmpty()) {
-            createKnockoutMatch(tournament, "final", winner(semifinals.get(0)), winner(semifinals.get(1)));
+            createFinal(tournament, seriesWinner(tournament, "sf-1"), seriesWinner(tournament, "sf-2"));
             tournament.setStatus("FINAL");
             tournaments.save(tournament);
         }
@@ -130,6 +144,22 @@ public class TournamentService {
         matches.findByTournamentIdAndStage(tournament.getId(), "FINAL").forEach(matches::delete);
         if ("FINAL".equals(tournament.getStatus()) || "COMPLETE".equals(tournament.getStatus())) {
             tournament.setStatus("IN_PROGRESS");
+            tournaments.save(tournament);
+        }
+    }
+
+    @Transactional
+    public void resetStagesAfter(Tournament tournament, String stage) {
+        List<String> stages = switch (stage) {
+            case "ROUND_OF_16" -> List.of("SEMIFINAL", "FINAL");
+            case "SEMIFINAL" -> List.of("FINAL");
+            default -> List.of();
+        };
+        for (String downstream : stages) {
+            matches.findByTournamentIdAndStage(tournament.getId(), downstream).forEach(matches::delete);
+        }
+        if (!stages.isEmpty() && ("FINAL".equals(tournament.getStatus()) || "COMPLETE".equals(tournament.getStatus()))) {
+            tournament.setStatus("KNOCKOUT");
             tournaments.save(tournament);
         }
     }
@@ -171,27 +201,39 @@ public class TournamentService {
                 .toList();
     }
 
-    private void createKnockoutMatch(Tournament tournament, String id, Long home, Long away) {
-        matches.save(Match.builder()
-                .id(id)
-                .tournamentId(tournament.getId())
-                .homeUserId(home)
-                .awayUserId(away)
-                .stage(id.startsWith("semi") ? "SEMIFINAL" : "FINAL")
-                .status("PENDING")
-                .draw(false)
-                .build());
+    private void createTie(Tournament tournament, String seriesId, String stage, Long home, Long away) {
+        matches.save(Match.builder().id(seriesId + "-leg-1").tournamentId(tournament.getId())
+                .homeUserId(home).awayUserId(away).stage(stage).seriesId(seriesId).leg(1)
+                .status("PENDING").draw(false).build());
+        matches.save(Match.builder().id(seriesId + "-leg-2").tournamentId(tournament.getId())
+                .homeUserId(away).awayUserId(home).stage(stage).seriesId(seriesId).leg(2)
+                .status("PENDING").draw(false).build());
+    }
+
+    private void createFinal(Tournament tournament, Long home, Long away) {
+        matches.save(Match.builder().id("final").tournamentId(tournament.getId())
+                .homeUserId(home).awayUserId(away).stage("FINAL").seriesId("final").leg(1)
+                .status("PENDING").draw(false).build());
+    }
+
+    public Long seriesWinner(Tournament tournament, String seriesId) {
+        List<Match> series = matches.findByTournamentIdAndSeriesId(tournament.getId(), seriesId);
+        if (series.isEmpty() || series.stream().anyMatch(m -> !played(m))) return null;
+        Map<Long, Integer> goals = new HashMap<>();
+        for (Match match : series) {
+            goals.merge(match.getHomeUserId(), match.getHomeScore(), Integer::sum);
+            goals.merge(match.getAwayUserId(), match.getAwayScore(), Integer::sum);
+        }
+        Long home = series.get(0).getHomeUserId();
+        Long away = series.get(0).getAwayUserId();
+        if (goals.getOrDefault(home, 0).equals(goals.getOrDefault(away, 0))) return null;
+        return goals.get(home) > goals.get(away) ? home : away;
     }
 
     private boolean played(Match match) {
         return "PLAYED".equals(match.getStatus())
                 && match.getHomeScore() != null
                 && match.getAwayScore() != null;
-    }
-
-    private Long winner(Match match) {
-        return match.getHomeScore() > match.getAwayScore()
-                ? match.getHomeUserId() : match.getAwayUserId();
     }
 
     public static final class Standing {

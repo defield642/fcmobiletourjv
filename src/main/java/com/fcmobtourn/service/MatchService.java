@@ -25,15 +25,11 @@ public class MatchService {
             throw new IllegalArgumentException("Both scores must be whole numbers from 0 to 99.");
         }
         Match match = matches.findById(id).orElseThrow(() -> new IllegalArgumentException("Match not found."));
-        if (!"LEAGUE".equals(match.getStage()) && homeScore.equals(awayScore)) {
-            throw new IllegalArgumentException("Knockout matches cannot finish level. Enter the winner's final score.");
-        }
-
         Tournament tournament = tournaments.findById(match.getTournamentId()).orElseThrow();
         if ("LEAGUE".equals(match.getStage())) {
             tournamentService.resetKnockouts(tournament);
-        } else if ("SEMIFINAL".equals(match.getStage())) {
-            tournamentService.resetFinal(tournament);
+        } else {
+            tournamentService.resetStagesAfter(tournament, match.getStage());
         }
         match.setHomeScore(homeScore);
         match.setAwayScore(awayScore);
@@ -41,7 +37,17 @@ public class MatchService {
         match.setDraw(homeScore.equals(awayScore));
         match.setWinnerUserId(homeScore > awayScore ? match.getHomeUserId()
                 : awayScore > homeScore ? match.getAwayUserId() : null);
+        if ("FINAL".equals(match.getStage()) && homeScore.equals(awayScore)) {
+            throw new IllegalArgumentException("The final cannot finish level.");
+        }
         Match saved = matches.save(match);
+        if (match.getSeriesId() != null && !"FINAL".equals(match.getStage())
+                && matches.findByTournamentIdAndSeriesId(match.getTournamentId(), match.getSeriesId()).stream().allMatch(m ->
+                "PLAYED".equals(m.getStatus()) && m.getHomeScore() != null && m.getAwayScore() != null)) {
+            if (tournamentService.seriesWinner(tournament, match.getSeriesId()) == null) {
+                throw new IllegalArgumentException("Aggregate score is level. Edit a leg so the aggregate winner is clear.");
+            }
+        }
         tournamentService.advanceAfterScore(tournament);
         return saved;
     }
