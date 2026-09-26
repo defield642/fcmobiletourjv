@@ -10,10 +10,10 @@ services:
         fromDatabase:
           name: fcmobile-tournament-db
           property: connectionString
-      - key: OPENROUTER_API_KEY
+      - key: ADMIN_USERNAME
         sync: false
-      - key: OPENROUTER_MODEL
-        value: openrouter/free
+      - key: ADMIN_ACCESS_PIN
+        sync: false
 
   - type: web
     name: fcmobile-tournament-frontend
